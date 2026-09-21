@@ -1,0 +1,26 @@
+# IDE & Editor
+.idea/
+.vscode/
+*.iml
+*.ipr
+*.iws
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Backend (api)
+api/node_modules/
+api/.env
+api/npm-debug.log*
+api/yarn-debug.log*
+api/yarn-error.log*
+
+# Frontend (ui)
+ui/.dart_tool/
+ui/.flutter-plugins-dependencies
+ui/.pub-cache/
+ui/.pub/
+ui/build/
+ui/.env
+ui/migrate_working_dir/

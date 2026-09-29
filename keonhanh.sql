@@ -130,4 +130,29 @@ CREATE TABLE Messages (
     CreatedAt DATETIME DEFAULT GETDATE()
 );
 GO
+
+-- 9. Table Notifications (Thông báo người dùng)
+CREATE TABLE Notifications (
+    Id UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),
+    UserId UNIQUEIDENTIFIER NOT NULL FOREIGN KEY REFERENCES Users(Id),
+    Title NVARCHAR(255) NOT NULL,
+    Message NVARCHAR(MAX) NOT NULL,
+    Type NVARCHAR(50) DEFAULT 'match_matched',
+    RelatedId UNIQUEIDENTIFIER NULL,
+    IsRead BIT DEFAULT 0,
+    CreatedAt DATETIME DEFAULT GETDATE()
+);
+GO
+
+-- Tạo SYNONYM để hỗ trợ tương thích ngược cho backend/code cũ nếu có truy vấn đến tên cũ 'User_profiles' hoặc 'Notification'
+IF NOT EXISTS (SELECT * FROM sys.synonyms WHERE name = 'User_profiles')
+BEGIN
+    CREATE SYNONYM User_profiles FOR UserProfiles;
+END
+GO
+IF NOT EXISTS (SELECT * FROM sys.synonyms WHERE name = 'Notification')
+BEGIN
+    CREATE SYNONYM Notification FOR Notifications;
+END
+GO
 GO

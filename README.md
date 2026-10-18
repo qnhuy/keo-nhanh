@@ -96,3 +96,16 @@ keonhanh/
    npm start
    # hoặc: npm run dev
    ```
+
+---
+
+## 6. Danh Sách RESTful API Endpoints
+
+- **Auth:** `POST /api/auth/register`, `POST /api/auth/login`
+- **Profiles & Players:** `GET /api/user-profiles/:userId`, `POST /api/user-profiles`, `GET /api/players`
+- **Teams:** `GET /api/teams`, `GET /api/teams/:id`, `POST /api/teams`, `PATCH /api/teams/:teamId/recruiting`
+- **Matches:** `GET /api/matches`, `POST /api/matches`, `POST /api/matches/:id/match`, `POST /api/matches/:id/unmatch`
+- **Join Requests:** `GET /api/join-requests/captain/:userId`, `POST /api/join-requests`, `PATCH /api/join-requests/:id/approve`
+- **Invitations:** `GET /api/invitations/user/:userId`, `POST /api/invitations`, `PATCH /api/invitations/:id/accept`
+- **Messages:** `GET /api/messages/:teamId`, `POST /api/messages`
+- **Notifications:** `GET /api/notifications`, `PATCH /api/notifications/:id/read`

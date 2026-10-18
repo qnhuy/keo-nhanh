@@ -66,3 +66,33 @@ keonhanh/
     │   └── main.dart           # Điểm khởi chạy ứng dụng & Navigation
     └── pubspec.yaml
 ```
+
+---
+
+## 5. Hướng Dẫn Cài Đặt & Chạy Backend
+
+### Yêu cầu môi trường
+- Node.js v18+ & npm
+- Microsoft SQL Server 2016+
+
+### Các bước khởi chạy
+1. Mở SSMS hoặc Azure Data Studio, chạy file `keonhanh.sql` để tạo database và nạp dữ liệu mẫu.
+2. Di chuyển vào thư mục backend:
+   ```bash
+   cd api
+   npm install
+   ```
+3. Cấu hình file `.env` theo mẫu `.env.example`:
+   ```env
+   PORT=3000
+   DB_USER=sa
+   DB_PASSWORD=YourPassword123
+   DB_SERVER=localhost
+   DB_NAME=Keonhanh
+   JWT_SECRET=supersecretkey
+   ```
+4. Chạy máy chủ:
+   ```bash
+   npm start
+   # hoặc: npm run dev
+   ```

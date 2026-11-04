@@ -109,3 +109,36 @@ keonhanh/
 - **Invitations:** `GET /api/invitations/user/:userId`, `POST /api/invitations`, `PATCH /api/invitations/:id/accept`
 - **Messages:** `GET /api/messages/:teamId`, `POST /api/messages`
 - **Notifications:** `GET /api/notifications`, `PATCH /api/notifications/:id/read`
+
+---
+
+## 7. Hướng Dẫn Cài Đặt & Chạy Frontend (Flutter Mobile)
+
+1. Di chuyển vào thư mục `ui`:
+   ```bash
+   cd ui
+   flutter pub get
+   ```
+2. Cấu hình `ui/.env`:
+   ```env
+   API_BASE_URL=http://localhost:3000
+   # Android Emulator: http://10.0.2.2:3000
+   ```
+3. Khởi chạy ứng dụng:
+   ```bash
+   flutter run
+   ```
+
+---
+
+## 8. Danh Sách Tài Khoản Dùng Thử (Demo Accounts)
+
+Mật khẩu mặc định cho tất cả tài khoản: **`123456`**
+
+| Tên đăng nhập | Mật khẩu | Vai trò | Mô tả |
+| :--- | :--- | :--- | :--- |
+| `admin_keonhanh` | `123456` | `admin` | Quản trị viên hệ thống |
+| `nguyen_van_a` | `123456` | `captain` | Đội trưởng FC Sài Gòn Phố |
+| `tran_thi_b` | `123456` | `captain` | Đội trưởng FC Hà Nội Titans |
+| `le_van_c` | `123456` | `captain` | Đội trưởng FC Rồng Vàng Đà Nẵng |
+| `dinh_trong_l` | `123456` | `player` | Cầu thủ tự do |

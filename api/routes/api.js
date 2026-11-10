@@ -11,7 +11,8 @@ const routeModules = [
     require('./messages'),
     require('./notifications'),
     require('./admin'),
-    require('./ai')
+    require('./ai'),
+    require('./payment')
 ];
 
 module.exports = function registerRoutes(dependencies) {

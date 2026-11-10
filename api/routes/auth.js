@@ -33,10 +33,17 @@ app.post('/auth/login', async (req, res) => {
         if (!match) return res.status(401).json({ success: false, message: 'Sai mật khẩu' });
 
         const token = jwt.sign({ id: user.Id }, JWT_SECRET);
+        const isPaidActive = Boolean(user.IsPaid && user.PaidUntil && new Date(user.PaidUntil) > new Date());
         res.json({
             success: true,
             token,
-            user: { id: user.Id, username: user.Username, role: user.Role }
+            user: {
+                id: user.Id,
+                username: user.Username,
+                role: user.Role,
+                isPaid: isPaidActive,
+                paidUntil: user.PaidUntil
+            }
         });
     } catch (e) {
         console.error(e);

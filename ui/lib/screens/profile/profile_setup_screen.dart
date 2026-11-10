@@ -37,6 +37,11 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
   void initState() {
     super.initState();
     _fetchProfile(); // Tải dữ liệu hồ sơ cá nhân hiện tại từ máy chủ
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        context.read<AuthProvider>().refreshSubscription();
+      }
+    });
   }
 
   @override
@@ -197,6 +202,10 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
 
               // 2. Khung ảnh đại diện (Avatar)
               _buildAvatarCard(username),
+
+              // 2.1. Khung Gói Dịch Vụ Thành Viên (Free / Paid)
+              _buildSubscriptionCard(auth),
+              const SizedBox(height: 18),
 
               // 3. Khung nhập Họ tên & Số điện thoại
               const Text('Họ và tên', style: TextStyle(color: Color(0xFF2F3B33), fontSize: 14, fontWeight: FontWeight.w800)),
@@ -397,6 +406,133 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                   ),
                 ),
               ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Khung hiển thị gói dịch vụ (Tài khoản Miễn phí hoặc Thành viên Đặc quyền)
+  Widget _buildSubscriptionCard(AuthProvider auth) {
+    final isPaid = auth.isPaidActive;
+    final daysRemaining = auth.daysRemaining;
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: isPaid ? const Color(0xFFF0FDF4) : Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: isPaid ? const Color(0xFF86EFAC) : const Color(0xFFDFE7DF),
+          width: isPaid ? 1.5 : 1.0,
+        ),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x0A000000),
+            blurRadius: 6,
+            offset: Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 42,
+                height: 42,
+                decoration: BoxDecoration(
+                  color: isPaid ? const Color(0xFFDCFCE7) : const Color(0xFFF3F4F6),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(
+                  isPaid ? Icons.workspace_premium_rounded : Icons.star_outline_rounded,
+                  color: isPaid ? const Color(0xFF16A34A) : const Color(0xFF6B7280),
+                  size: 24,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Text(
+                          isPaid ? 'GÓI ĐẶC QUYỀN' : 'TÀI KHOẢN MIỄN PHÍ',
+                          style: TextStyle(
+                            color: isPaid ? const Color(0xFF15803D) : const Color(0xFF4B5563),
+                            fontSize: 14,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                        if (isPaid) ...[
+                          const SizedBox(width: 6),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF22C55E),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: const Text(
+                              'ĐANG BẬT',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 9,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      isPaid
+                          ? 'Còn $daysRemaining ngày sử dụng đặc quyền'
+                          : 'Nâng cấp chỉ 29.000đ / tháng (Ghim bài & AI không giới hạn)',
+                      style: const TextStyle(
+                        color: Color(0xFF6B7280),
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: () => context.push('/upgrade'),
+              icon: Icon(
+                isPaid ? Icons.autorenew_rounded : Icons.flash_on_rounded,
+                size: 16,
+                color: isPaid ? const Color(0xFF16A34A) : Colors.white,
+              ),
+              label: Text(
+                isPaid ? 'Gia hạn gói (29.000đ / 30 ngày)' : 'Nâng cấp ngay (29.000đ / 30 ngày)',
+                style: TextStyle(
+                  color: isPaid ? const Color(0xFF16A34A) : Colors.white,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: isPaid ? const Color(0xFFDCFCE7) : const Color(0xFF22C55E),
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  side: isPaid
+                      ? const BorderSide(color: Color(0xFF86EFAC))
+                      : BorderSide.none,
+                ),
+                padding: const EdgeInsets.symmetric(vertical: 10),
+              ),
             ),
           ),
         ],

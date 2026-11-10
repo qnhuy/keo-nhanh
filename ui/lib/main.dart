@@ -24,6 +24,8 @@ import 'screens/home/find_team_screen.dart';
 import 'screens/home/team_chat_screen.dart';
 import 'screens/admin/admin_dashboard_screen.dart';
 import 'screens/ai/ai_chat_screen.dart';
+import 'screens/profile/upgrade_screen.dart';
+import 'screens/profile/payment_qr_screen.dart';
 
 // --- TAB NAVIGATOR (Tương đương MainTabs trong RN) ---
 class MainTabs extends StatefulWidget {
@@ -252,6 +254,19 @@ class KeonhanhApp extends StatelessWidget {
         GoRoute(
           path: '/ai-chat',
           builder: (context, state) => const AiChatScreen(),
+        ),
+        GoRoute(
+          path: '/upgrade',
+          builder: (context, state) => const UpgradeScreen(),
+        ),
+        GoRoute(
+          path: '/payment-qr',
+          builder: (context, state) {
+            final extra = state.extra is Map<String, dynamic>
+                ? state.extra as Map<String, dynamic>
+                : <String, dynamic>{};
+            return PaymentQrScreen(paymentData: extra);
+          },
         ),
       ],
     );

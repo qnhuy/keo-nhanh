@@ -66,12 +66,101 @@ module.exports = function registerRoutes({ app, sql }) {
         };
     }
 
+    // GET /api/ai/usage/:userId - Kiểm tra số lượt hỏi AI còn lại trong ngày
+    app.get('/ai/usage/:userId', async (req, res) => {
+        try {
+            const { userId } = req.params;
+            const request = new sql.Request();
+            request.input('userId', sql.UniqueIdentifier, userId);
+
+            // 1. Kiểm tra trạng thái trả phí
+            const userRes = await request.query("SELECT IsPaid, PaidUntil FROM Users WHERE Id = @userId");
+            const user = userRes.recordset[0];
+            const isPaidActive = Boolean(user && user.IsPaid && user.PaidUntil && new Date(user.PaidUntil) > new Date());
+
+            if (isPaidActive) {
+                return res.json({
+                    success: true,
+                    isPaid: true,
+                    unlimited: true,
+                    remainingQuestions: 9999,
+                    message: 'Thành viên đặc quyền: Không giới hạn lượt hỏi AI'
+                });
+            }
+
+            // 2. Tra cứu lượt hỏi hôm nay đối với tài khoản Miễn phí
+            const usageRes = await request.query(`
+                SELECT QuestionCount 
+                FROM AiDailyUsage 
+                WHERE UserId = @userId AND UsageDate = CAST(GETDATE() AS DATE)
+            `);
+            const count = usageRes.recordset[0]?.QuestionCount || 0;
+            const remaining = Math.max(0, 5 - count);
+
+            res.json({
+                success: true,
+                isPaid: false,
+                unlimited: false,
+                usedQuestions: count,
+                maxDailyQuestions: 5,
+                remainingQuestions: remaining
+            });
+
+        } catch (err) {
+            console.error('[AI Usage] Lỗi khi tra cứu lượt hỏi:', err);
+            res.json({ success: true, isPaid: false, remainingQuestions: 5 });
+        }
+    });
+
     // POST /api/ai/chat - Trợ lý AI tư vấn và gợi ý kèo đấu
     app.post('/ai/chat', async (req, res) => {
         try {
-            const { message, history } = req.body;
+            const { message, history, userId } = req.body;
             if (!message || typeof message !== 'string') {
                 return res.status(400).json({ success: false, message: 'Nội dung tin nhắn không hợp lệ' });
+            }
+
+            // 0. Kiểm tra hạn mức hỏi AI nếu có userId
+            let isUserPaid = false;
+            let currentRemaining = 5;
+
+            if (userId) {
+                const userReq = new sql.Request();
+                userReq.input('userId', sql.UniqueIdentifier, userId);
+                const userRes = await userReq.query("SELECT IsPaid, PaidUntil FROM Users WHERE Id = @userId");
+                const u = userRes.recordset[0];
+                isUserPaid = Boolean(u && u.IsPaid && u.PaidUntil && new Date(u.PaidUntil) > new Date());
+
+                if (!isUserPaid) {
+                    const usageReq = new sql.Request();
+                    usageReq.input('userId', sql.UniqueIdentifier, userId);
+                    const usageRes = await usageReq.query(`
+                        SELECT QuestionCount 
+                        FROM AiDailyUsage 
+                        WHERE UserId = @userId AND UsageDate = CAST(GETDATE() AS DATE)
+                    `);
+                    const count = usageRes.recordset[0]?.QuestionCount || 0;
+
+                    if (count >= 5) {
+                        return res.status(403).json({
+                            success: false,
+                            isLimitReached: true,
+                            message: 'Bạn đã dùng hết 5 câu hỏi miễn phí hôm nay. Hãy nâng cấp Gói Đặc Quyền 29.000đ/tháng để hỏi AI không giới hạn!'
+                        });
+                    }
+
+                    // Tăng số lượt hỏi trong ngày
+                    await usageReq.query(`
+                        MERGE AiDailyUsage AS target
+                        USING (SELECT @userId AS UserId, CAST(GETDATE() AS DATE) AS UsageDate) AS source
+                        ON (target.UserId = source.UserId AND target.UsageDate = source.UsageDate)
+                        WHEN MATCHED THEN
+                            UPDATE SET target.QuestionCount = target.QuestionCount + 1
+                        WHEN NOT MATCHED THEN
+                            INSERT (UserId, UsageDate, QuestionCount) VALUES (source.UserId, source.UsageDate, 1);
+                    `);
+                    currentRemaining = Math.max(0, 4 - count);
+                }
             }
 
             // 1. Lấy danh sách các kèo đấu đang mở (Status = 'open') từ SQL Server

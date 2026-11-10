@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
+import '../../providers/auth_provider.dart';
 import '../../models/models.dart';
 import '../../services/services.dart';
 
@@ -76,9 +78,11 @@ class _AiChatScreenState extends State<AiChatScreen> {
     _scrollToBottom();
 
     try {
+      final userId = context.read<AuthProvider>().userId;
       final response = await AiService.sendMessage(
         message: text,
         history: _messages,
+        userId: userId,
       );
 
       final botMessage = AiChatMessage(
@@ -217,6 +221,45 @@ class _AiChatScreenState extends State<AiChatScreen> {
         ],
       ),
       actions: [
+        Consumer<AuthProvider>(
+          builder: (context, auth, _) {
+            final isPaid = auth.isPaidActive;
+            return InkWell(
+              onTap: isPaid ? null : () => context.push('/upgrade'),
+              borderRadius: BorderRadius.circular(8),
+              child: Container(
+                margin: const EdgeInsets.symmetric(vertical: 12, horizontal: 4),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: isPaid ? const Color(0xFFDCFCE7) : const Color(0xFFFEF3C7),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: isPaid ? const Color(0xFF86EFAC) : const Color(0xFFFCD34D),
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      isPaid ? Icons.stars : Icons.bolt,
+                      color: isPaid ? const Color(0xFF16A34A) : const Color(0xFFB45309),
+                      size: 14,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      isPaid ? 'Không giới hạn' : 'Nâng cấp 29k',
+                      style: TextStyle(
+                        color: isPaid ? const Color(0xFF16A34A) : const Color(0xFFB45309),
+                        fontWeight: FontWeight.bold,
+                        fontSize: 11,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        ),
         IconButton(
           tooltip: 'Làm mới hội thoại',
           icon: const Icon(Icons.refresh, color: Color(0xFF64748B)),

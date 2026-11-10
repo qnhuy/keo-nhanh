@@ -17,6 +17,8 @@ GO
 -- ==========================================================
 -- 0. Xóa các bảng cũ nếu đã tồn tại (hỗ trợ chạy lại script an toàn)
 -- ==========================================================
+IF OBJECT_ID('dbo.AiDailyUsage', 'U') IS NOT NULL DROP TABLE dbo.AiDailyUsage;
+IF OBJECT_ID('dbo.Payments', 'U') IS NOT NULL DROP TABLE dbo.Payments;
 IF OBJECT_ID('dbo.Notifications', 'U') IS NOT NULL DROP TABLE dbo.Notifications;
 IF OBJECT_ID('dbo.Messages', 'U') IS NOT NULL DROP TABLE dbo.Messages;
 IF OBJECT_ID('dbo.Invitations', 'U') IS NOT NULL DROP TABLE dbo.Invitations;
@@ -40,6 +42,8 @@ CREATE TABLE Users (
     Username NVARCHAR(255) NOT NULL UNIQUE,
     Password NVARCHAR(255) NOT NULL,
     Role NVARCHAR(50) DEFAULT 'player',
+    IsPaid BIT DEFAULT 0,
+    PaidUntil DATETIME NULL,
     CreatedAt DATETIME DEFAULT GETDATE(),
     UpdatedAt DATETIME DEFAULT GETDATE()
 );
@@ -94,6 +98,7 @@ CREATE TABLE Matches (
     PlayTime DATETIME NOT NULL,
     Status NVARCHAR(50) DEFAULT 'open' CHECK (Status IN ('open', 'matched', 'finished', 'cancelled')),
     MatchedWithTeamId UNIQUEIDENTIFIER FOREIGN KEY REFERENCES Teams(Id),
+    IsPinned BIT DEFAULT 0,
     CreatedAt DATETIME DEFAULT GETDATE(),
     UpdatedAt DATETIME DEFAULT GETDATE()
 );
@@ -141,6 +146,31 @@ CREATE TABLE Notifications (
     RelatedId UNIQUEIDENTIFIER NULL,
     IsRead BIT DEFAULT 0,
     CreatedAt DATETIME DEFAULT GETDATE()
+);
+GO
+
+-- 10. Table Payments (Lịch sử giao dịch thanh toán PayOS)
+CREATE TABLE Payments (
+    Id UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),
+    UserId UNIQUEIDENTIFIER NOT NULL FOREIGN KEY REFERENCES Users(Id),
+    OrderCode BIGINT NOT NULL UNIQUE,
+    Amount INT NOT NULL DEFAULT 29000,
+    PackageName NVARCHAR(100) DEFAULT N'Gói Đặc Quyền 1 Tháng',
+    Status NVARCHAR(50) DEFAULT 'PENDING' CHECK (Status IN ('PENDING', 'PAID', 'CANCELLED')),
+    PaymentUrl NVARCHAR(MAX),
+    QrCode NVARCHAR(MAX),
+    CreatedAt DATETIME DEFAULT GETDATE(),
+    PaidAt DATETIME NULL
+);
+GO
+
+-- 11. Table AiDailyUsage (Giới hạn lượt hỏi AI trong ngày cho tài khoản Miễn phí)
+CREATE TABLE AiDailyUsage (
+    Id UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),
+    UserId UNIQUEIDENTIFIER NOT NULL FOREIGN KEY REFERENCES Users(Id),
+    UsageDate DATE DEFAULT CAST(GETDATE() AS DATE),
+    QuestionCount INT DEFAULT 1,
+    CONSTRAINT UQ_User_Date UNIQUE (UserId, UsageDate)
 );
 GO
 

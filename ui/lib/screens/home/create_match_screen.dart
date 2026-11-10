@@ -36,6 +36,7 @@ class _CreateMatchScreenState extends State<CreateMatchScreen> {
 
   // Trạng thái đang gửi yêu cầu tạo kèo lên máy chủ
   bool _loading = false;
+  bool _isPinned = false; // Ghim kèo ưu tiên (Đặc quyền 30 ngày)
 
   // Lưu trữ các câu thông báo lỗi cho từng trường nhập liệu
   Map<String, String> _errors = {};
@@ -205,6 +206,7 @@ class _CreateMatchScreenState extends State<CreateMatchScreen> {
         location: _locationController.text.trim(),
         latitude: _mapCoordinate?['latitude'],
         longitude: _mapCoordinate?['longitude'],
+        isPinned: _isPinned,
       );
 
       if (result['success'] == true) {
@@ -461,8 +463,102 @@ class _CreateMatchScreenState extends State<CreateMatchScreen> {
           _buildPlayTimePicker(),
           const SizedBox(height: 18),
 
+          // Trường 4: Tùy chọn Ghim Kèo Đặc Quyền (Paid feature)
+          _buildPinnedOption(),
+          const SizedBox(height: 18),
+
           // Thông tin lưu ý trạng thái kèo
           _buildStatusNotice(),
+        ],
+      ),
+    );
+  }
+
+  /// Tùy chọn ghim kèo ưu tiên dành cho tài khoản đã trả tiền 30 ngày
+  Widget _buildPinnedOption() {
+    final auth = context.watch<AuthProvider>();
+    final isPaidActive = auth.isPaidActive;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+      decoration: BoxDecoration(
+        color: _isPinned ? const Color(0xFFFEF3C7) : const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: _isPinned ? const Color(0xFFFCD34D) : const Color(0xFFE2E8F0),
+          width: _isPinned ? 1.5 : 1.0,
+        ),
+      ),
+      child: SwitchListTile(
+        contentPadding: EdgeInsets.zero,
+        dense: true,
+        title: const Row(
+          children: [
+            Icon(Icons.push_pin, color: Color(0xFFB45309), size: 18),
+            SizedBox(width: 8),
+            Text(
+              'Ghim Kèo Lên Đầu Trang (Spotlight)',
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 13,
+                color: Color(0xFF0F172A),
+              ),
+            ),
+          ],
+        ),
+        subtitle: const Text(
+          'Kèo luôn đứng vị trí số 1 và có viền vàng nổi bật (Dành riêng cho thành viên đặc quyền)',
+          style: TextStyle(fontSize: 11, color: Color(0xFF64748B)),
+        ),
+        activeThumbColor: const Color(0xFF16A34A),
+        activeTrackColor: const Color(0xFF86EFAC),
+        value: _isPinned,
+        onChanged: (val) {
+          if (val && !isPaidActive) {
+            _showUpgradePrompt();
+          } else {
+            setState(() => _isPinned = val);
+          }
+        },
+      ),
+    );
+  }
+
+  void _showUpgradePrompt() {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+        title: const Row(
+          children: [
+            Icon(Icons.stars, color: Color(0xFFEAB308)),
+            SizedBox(width: 8),
+            Text('Đặc Quyền Thành Viên'),
+          ],
+        ),
+        content: const Text(
+          'Tính năng Ghim Kèo Ưu Tiên chỉ dành cho tài khoản đã đăng ký Gói Đặc Quyền (29.000đ/30 ngày).\n\nBạn có muốn nâng cấp ngay để mở khóa tính năng ghim kèo và hỏi AI không giới hạn không?',
+          style: TextStyle(fontSize: 13, height: 1.4),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Để Sau', style: TextStyle(color: Colors.grey)),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              context.push('/upgrade');
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF16A34A),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            child: const Text(
+              'Nâng Cấp Ngay (29.000đ)',
+              style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+            ),
+          ),
         ],
       ),
     );

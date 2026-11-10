@@ -66,6 +66,7 @@ class MatchService {
     String? location,
     double? latitude,
     double? longitude,
+    bool isPinned = false,
   }) async {
     try {
       final res = await Http.post(
@@ -77,6 +78,7 @@ class MatchService {
           'location': location ?? '',
           'latitude': latitude,
           'longitude': longitude,
+          'isPinned': isPinned,
         },
       );
       final data = jsonDecode(res.body);

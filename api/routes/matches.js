@@ -3,13 +3,22 @@ module.exports = function registerRoutes({ app, sql, bcrypt, jwt, JWT_SECRET }) 
 app.get('/matches', async (req, res) => {
     try {
         const result = await sql.query(`
-            SELECT m.*, t.Name AS TeamName 
+            SELECT m.*, t.Name AS TeamName, t.Logo AS TeamLogo
             FROM Matches m 
             LEFT JOIN Teams t ON m.CreatorTeamId = t.Id
+            ORDER BY m.IsPinned DESC, m.PlayTime ASC
         `);
         const data = result.recordset.map(m => ({
-            _id: m.Id, status: m.Status, playTime: m.PlayTime, fieldName: m.FieldName,
-            creatorTeamId: { name: m.TeamName || 'Đội ẩn danh' }
+            _id: m.Id,
+            status: m.Status,
+            playTime: m.PlayTime,
+            fieldName: m.FieldName,
+            location: m.Location,
+            isPinned: Boolean(m.IsPinned),
+            creatorTeamId: {
+                name: m.TeamName || 'Đội ẩn danh',
+                logo: m.TeamLogo || ''
+            }
         }));
         res.json({ success: true, data });
     } catch (e) {
@@ -19,9 +28,23 @@ app.get('/matches', async (req, res) => {
 
 app.post('/matches', async (req, res) => {
     try {
-        const { userId, playTime, fieldName, location, latitude, longitude } = req.body;
+        const { userId, playTime, fieldName, location, latitude, longitude, isPinned } = req.body;
         const request = new sql.Request();
         request.input('userId', sql.UniqueIdentifier, userId);
+
+        // Kiểm tra quyền ghim kèo nếu có yêu cầu ghim
+        let shouldPin = false;
+        if (isPinned) {
+            const userRes = await request.query(`
+                SELECT IsPaid, PaidUntil 
+                FROM Users 
+                WHERE Id = @userId
+            `);
+            const u = userRes.recordset[0];
+            if (u && u.IsPaid && u.PaidUntil && new Date(u.PaidUntil) > new Date()) {
+                shouldPin = true;
+            }
+        }
 
         const teamRes = await request.query(`
             SELECT TOP 1 Id 
@@ -40,12 +63,13 @@ app.post('/matches', async (req, res) => {
         request.input('location', sql.NVarChar, location || '');
         request.input('latitude', sql.Float, latitude || null);
         request.input('longitude', sql.Float, longitude || null);
+        request.input('isPinned', sql.Bit, shouldPin ? 1 : 0);
 
         await request.query(`
-            INSERT INTO Matches (CreatorTeamId, PlayTime, FieldName, Location, Latitude, Longitude)
-            VALUES (@teamId, @playTime, @fieldName, @location, @latitude, @longitude)
+            INSERT INTO Matches (CreatorTeamId, PlayTime, FieldName, Location, Latitude, Longitude, IsPinned)
+            VALUES (@teamId, @playTime, @fieldName, @location, @latitude, @longitude, @isPinned)
         `);
-        res.json({ success: true, message: 'Tạo kèo thành công' });
+        res.json({ success: true, message: shouldPin ? 'Tạo kèo và ghim ưu tiên thành công!' : 'Tạo kèo thành công' });
     } catch (e) {
         console.error(e);
         res.status(500).json({ success: false, message: 'Lỗi server' });
@@ -106,6 +130,7 @@ app.get('/matches/:id', async (req, res) => {
             fieldName: m.FieldName, 
             fieldAddress: m.Location,
             location: m.Location,
+            isPinned: Boolean(m.IsPinned),
             creatorTeamId: { _id: m.CreatorTeamId, name: m.CreatorTeamName || 'Đội ẩn danh', logo: m.CreatorTeamLogo },
             matchedWithTeamId: m.MatchedWithTeamId ? { _id: m.MatchedWithTeamId, name: m.MatchedTeamName || 'Đội ẩn danh', logo: m.MatchedTeamLogo } : null
         };

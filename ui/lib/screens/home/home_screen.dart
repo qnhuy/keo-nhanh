@@ -155,16 +155,59 @@ class _HomeScreenState extends State<HomeScreen> {
 
   /// Header trên cùng: Lời chào và Nút Đăng nhập/Đăng ký hoặc Avatar
   Widget _buildHeader(bool isLoggedIn, String username) {
+    final auth = context.watch<AuthProvider>();
+    final isPaidActive = auth.isPaidActive;
+
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(
-          isLoggedIn ? 'Xin chào, $username' : 'KeoNhanh',
-          style: const TextStyle(
-            fontSize: 18,
-            color: Color(0xFF166534),
-            fontWeight: FontWeight.w800,
-          ),
+        Row(
+          children: [
+            Text(
+              isLoggedIn ? 'Xin chào, $username' : 'KeoNhanh',
+              style: const TextStyle(
+                fontSize: 18,
+                color: Color(0xFF166534),
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            if (isLoggedIn) ...[
+              const SizedBox(width: 8),
+              InkWell(
+                onTap: () => context.push('/upgrade'),
+                borderRadius: BorderRadius.circular(8),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: isPaidActive ? const Color(0xFFFEF3C7) : const Color(0xFFF1F5F9),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: isPaidActive ? const Color(0xFFFCD34D) : const Color(0xFFCBD5E1),
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        isPaidActive ? Icons.stars : Icons.workspace_premium_outlined,
+                        color: isPaidActive ? const Color(0xFFB45309) : const Color(0xFF64748B),
+                        size: 13,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        isPaidActive ? '${auth.daysRemaining}d' : '29k',
+                        style: TextStyle(
+                          color: isPaidActive ? const Color(0xFFB45309) : const Color(0xFF475569),
+                          fontWeight: FontWeight.bold,
+                          fontSize: 11,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ],
         ),
         if (isLoggedIn)
           Row(

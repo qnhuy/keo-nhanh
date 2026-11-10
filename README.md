@@ -7,6 +7,7 @@
   <img src="https://img.shields.io/badge/Express.js-000000?style=for-the-badge&logo=express&logoColor=white" alt="Express" />
   <img src="https://img.shields.io/badge/Microsoft%20SQL%20Server-CC292B?style=for-the-badge&logo=microsoftsqlserver&logoColor=white" alt="MSSQL" />
   <img src="https://img.shields.io/badge/Google%20Gemini-8E75C2?style=for-the-badge&logo=google&logoColor=white" alt="Gemini AI" />
+  <img src="https://img.shields.io/badge/PayOS-VietQR%2029k-0052CC?style=for-the-badge&logo=contactlesspayment&logoColor=white" alt="PayOS" />
 </p>
 
 ---
@@ -21,6 +22,7 @@
 - **Giao tiếp nội bộ:** Kênh trò chuyện nhóm (Team Chat) riêng biệt cho từng đội bóng để thông báo và thảo luận chiến thuật.
 - **Quản trị hệ thống (Admin Portal):** Phân hệ chuyên biệt dành cho Ban quản trị theo dõi chỉ số KPI, kiểm duyệt kèo đấu vi phạm, quản lý người dùng và phát thông báo toàn hệ thống.
 - **Trợ lý AI thông minh (AI Match Assistant):** Tích hợp mô hình **Google Gemini Flash** hỗ trợ gợi ý kèo bóng đá dựa trên ngôn ngữ tự nhiên, áp dụng kỹ thuật **Context Injection (RAG)** chống ảo giác, hiển thị thẻ kèo tương tác trực tiếp trong luồng chat.
+- **Cổng thanh toán PayOS (VietQR) & Đặc quyền thành viên:** Tích hợp thanh toán trực tuyến tự động qua **PayOS** với mô hình phân cấp tinh gọn: **Tài khoản Miễn phí** & **Gói Trả phí 1 tháng (29.000 VNĐ)**. Mở khóa tính năng ghim kèo nổi bật lên đầu trang và sử dụng Trợ lý AI Gemini không giới hạn.
 
 ---
 
@@ -66,9 +68,15 @@
    # Cấu hình Google Gemini AI
    GEMINI_API_KEY=your_gemini_api_key_here
    GEMINI_MODEL=gemini-3.5-flash-lite
+
+   # Cấu hình Cổng thanh toán PayOS (VietQR)
+   PAYOS_CLIENT_ID=your_client_id_here
+   PAYOS_API_KEY=your_api_key_here
+   PAYOS_CHECKSUM_KEY=your_checksum_key_here
+   PAYOS_PACKAGE_PRICE=29000
    ```
 
-   _(Lưu ý: Nếu chưa điền API Key, hệ thống tự động chuyển sang cơ chế Safe Offline Matcher mà không báo lỗi)_.
+   _(Lưu ý: Nếu chưa điền PayOS API Key, hệ thống tự động kích hoạt **Safe Mock VietQR Mode** kèm API giả lập `/api/payment/simulate-success/:orderCode` phục vụ kiểm thử và demo nhanh mà không cần tài khoản PayOS thật)_.
 
 4. Khởi chạy máy chủ backend:
    ```bash
@@ -202,6 +210,20 @@ Màn hình trò chuyện `/ai-chat` kết nối với mô hình **Google Gemini 
 - **Quick Prompts tiện lợi:** Hàng nút câu hỏi mẫu phía trên thanh nhập liệu (_Kèo bóng mở hôm nay_, _Kèo khu vực Tân Bình_, _Kèo khu vực Quận 7_, _Kèo cuối tuần này_).
 - **Cơ chế Fallback thông minh (Safe Offline Matcher):** Nếu chưa cấu hình API Key hoặc mất kết nối internet, hệ thống tự động kích hoạt bộ xử lý từ khóa nội bộ để phân tích và trả về đúng các kèo phù hợp, đảm bảo an toàn tuyệt đối khi demo đồ án.
 
+### 4.9. Cổng Thanh Toán PayOS (VietQR) & Đặc Quyền Thành Viên (29.000 VNĐ / Tháng)
+
+Hệ thống phân cấp người dùng tinh gọn thành 2 cấp độ: **Miễn Phí (Free)** và **Trả Phí (Paid - 30 ngày)**:
+
+- **Mức giá cố định minh bạch:** Hiển thị rõ ràng và thanh toán chính xác **29.000 VNĐ** cho 30 ngày sử dụng đặc quyền. Nếu người dùng gia hạn sớm, thời hạn 30 ngày được cộng dồn tiếp nối vào ngày hết hạn cũ.
+- **Trang hiển thị VietQR độc lập (`/payment-qr`):** Giao diện chuyên biệt (không hiển thị trong modal/popup chật hẹp), hiển thị mã VietQR động chuẩn NAPAS 247, đồng hồ đếm ngược 15 phút, các nút sao chép thông tin chuyển khoản 1 chạm (Ngân hàng, Số tài khoản, Số tiền, Nội dung chuyển khoản).
+- **Lưu ảnh mã QR về máy:** Tích hợp nút **"Lưu Ảnh QR Vào Máy"** (thông qua thư viện `gal`), tải trực tiếp mã thanh toán vào bộ sưu tập ảnh của điện thoại để người dùng dễ dàng mở ứng dụng Mobile Banking quét mã.
+- **Tự động kích hoạt thông minh:** Backend xử lý **PayOS Webhook** tự động cập nhật trạng thái đơn hàng sang `PAID` và gia hạn người dùng. Đồng thời, màn hình thanh toán tự động kiểm tra trạng thái mỗi 3 giây (Smart Polling) để chuyển hướng về trang chủ ngay khi giao dịch thành công.
+- **Các đặc quyền dành riêng cho Thành viên Trả phí:**
+  1. **Ghim Kèo Lên Đầu Bảng Tin (Spotlight Match):** Đội trưởng có tài khoản trả phí có thể bật tùy chọn ghim khi tạo kèo. Kèo ghim luôn đứng vị trí đầu tiên trong danh sách, có viền vàng nổi bật và huy hiệu `NỔI BẬT`.
+  2. **Trợ lý AI Gemini Không Giới Hạn:** Tài khoản miễn phí bị giới hạn 5 câu hỏi/ngày. Thành viên trả phí được hỏi đáp chiến thuật, tư vấn đối thủ và tìm kèo không giới hạn.
+  3. **Huy hiệu Thành viên Đặc quyền:** Hiển thị trực tiếp trên thanh tiêu đề ứng dụng, màn hình Chat AI và trang Hồ sơ cá nhân.
+- **Chế độ kiểm thử an toàn (Safe Mock & Simulation):** Đi kèm nút giả lập thanh toán thành công và API `/api/payment/simulate-success/:orderCode`, giúp giảng viên hoặc hội đồng nghiệm thu có thể kiểm thử toàn bộ luồng thanh toán và mở khóa tính năng ngay lập tức mà không cần chuyển khoản thật.
+
 ---
 
 ## 5. Kiến Trúc Hệ Thống (Architecture)
@@ -255,13 +277,14 @@ flowchart TD
 - **Môi trường & Cấu hình:** `flutter_dotenv: ^6.0.0`
 - **Giao tiếp mạng:** `http: ^1.6.0`
 - **Bản đồ & Tọa độ:** OpenStreetMap Nominatim API, `url_launcher: ^6.3.3`
-- **Xử lý ảnh:** `image_picker: ^1.2.3`
+- **Xử lý ảnh & Thư viện phương tiện:** `image_picker: ^1.2.3`, `gal: ^2.3.3` (Lưu ảnh VietQR vào thư viện thiết bị)
 - **Thiết kế giao diện:** Material 3, sử dụng 100% icon từ thư viện Flutter (`Icons.*`), loại bỏ hoàn toàn emoji, giao diện đồng nhất chuẩn màu `#16A34A`.
 
 ### Backend (RESTful API)
 
 - **Nền tảng:** [Node.js](https://nodejs.org/) (v18+)
 - **Web Framework:** [Express.js](https://expressjs.com/) v5.x
+- **Cổng thanh toán trực tuyến:** `@payos/node` (v2.x) - Thanh toán tự động VietQR chuẩn NAPAS 247
 - **Trí tuệ nhân tạo:** **Google Gemini API** (`gemini-3.5-flash-lite`, `gemini-1.5-flash`) tích hợp qua native `fetch` và RAG context injection.
 - **Bảo mật:** `jsonwebtoken` (JWT), `bcrypt` (password hashing)
 - **Driver CSDL:** `mssql: ^12.7.3`
@@ -286,7 +309,8 @@ keonhanh/
 │
 ├── api/                               # Source code Node.js REST API (Backend)
 │   ├── config/
-│   │   └── database.js                # Cấu hình và kết nối MSSQL Server Pool
+│   │   ├── database.js                # Cấu hình và kết nối MSSQL Server Pool
+│   │   └── payos.js                   # Cấu hình PayOS SDK & Fallback Safe Mock VietQR
 │   ├── routes/
 │   │   ├── api.js                     # Router tổng hợp các phân hệ API
 │   │   ├── auth.js                    # Đăng ký & Đăng nhập (/api/auth)
@@ -299,7 +323,8 @@ keonhanh/
 │   │   ├── messages.js                # Tin nhắn đội (/api/messages)
 │   │   ├── notifications.js           # Thông báo hệ thống (/api/notifications)
 │   │   ├── admin.js                   # Quản trị hệ thống (/api/admin)
-│   │   └── ai.js                      # Trợ lý AI Gemini gợi ý kèo (/api/ai)
+│   │   ├── ai.js                      # Trợ lý AI Gemini gợi ý kèo (/api/ai)
+│   │   └── payment.js                 # Cổng thanh toán PayOS & Gia hạn (/api/payment)
 │   ├── .env                           # Biến môi trường thực tế (SQL, JWT, Gemini Key)
 │   ├── .env.example                   # File mẫu biến môi trường
 │   ├── index.js                       # Điểm khởi chạy Express server
@@ -335,6 +360,7 @@ keonhanh/
     │   │   ├── join_request_service.dart # Gọi API duyệt yêu cầu vào đội
     │   │   ├── match_service.dart     # Gọi API kèo đấu
     │   │   ├── notification_service.dart # Gọi API thông báo
+    │   │   ├── payment_service.dart   # Gọi API Cổng thanh toán PayOS & Đăng ký gói
     │   │   ├── player_service.dart    # Gọi API danh sách cầu thủ
     │   │   ├── profile_service.dart   # Gọi API hồ sơ cá nhân
     │   │   ├── team_service.dart      # Gọi API đội bóng
@@ -345,7 +371,7 @@ keonhanh/
     │   ├── widgets/                   # Các UI Widget tái sử dụng
     │   │   ├── empty_state.dart       # Giao diện hiển thị danh sách rỗng
     │   │   ├── loading_view.dart      # Giao diện xoay vòng chờ tải
-    │   │   ├── match_card.dart        # Thẻ thông tin kèo đấu chuẩn
+    │   │   ├── match_card.dart        # Thẻ thông tin kèo đấu chuẩn (Hỗ trợ huy hiệu Nổi Bật)
     │   │   ├── notification_button.dart # Nút chuông thông báo kèm badge số
     │   │   ├── status_badge.dart      # Nhãn trạng thái màu sắc
     │   │   └── widgets.dart           # Export barrel file
@@ -358,18 +384,20 @@ keonhanh/
     │   │   │   ├── login_screen.dart  # Màn hình đăng nhập
     │   │   │   └── register_screen.dart # Màn hình đăng ký
     │   │   ├── home/
-    │   │   │   ├── home_screen.dart   # Trang chủ (Banner, Kèo nổi bật, Phím tắt, Nút AI)
+    │   │   │   ├── home_screen.dart   # Trang chủ (Banner, Kèo nổi bật, Phím tắt, Nút AI, Badge gói)
     │   │   │   ├── match_screen.dart  # Quản lý kèo đấu của tôi (Kèm nút FAB Hỏi AI)
     │   │   │   ├── my_team_screen.dart# Quản lý đội bóng của tôi & duyệt thành viên
     │   │   │   ├── player_list_screen.dart # Danh sách cầu thủ tự do
     │   │   │   ├── all_matches_screen.dart # Xem toàn bộ kèo đấu hệ thống
-    │   │   │   ├── create_match_screen.dart# Tạo kèo đấu kèm bản đồ định vị
+    │   │   │   ├── create_match_screen.dart# Tạo kèo đấu kèm bản đồ định vị & Ghim Spotlight
     │   │   │   ├── match_detail_screen.dart# Chi tiết trận đấu và nút bắt kèo
     │   │   │   ├── create_team_screen.dart # Tạo đội bóng mới
     │   │   │   ├── find_team_screen.dart   # Tìm kiếm đội bóng và xin gia nhập
     │   │   │   └── team_chat_screen.dart   # Phòng chat nội bộ đội bóng
     │   │   └── profile/
-    │   │       └── profile_setup_screen.dart # Hồ sơ cầu thủ & Lối vào Quản trị hệ thống
+    │   │       ├── profile_setup_screen.dart # Hồ sơ cầu thủ, Trạng thái gói & Lối vào Quản trị
+    │   │       ├── upgrade_screen.dart       # Trang giới thiệu gói nâng cấp 29.000đ
+    │   │       └── payment_qr_screen.dart    # Trang hiển thị mã VietQR độc lập & Lưu ảnh QR
     │   └── main.dart                  # Cấu hình GoRouter, BottomNavigationBar và khởi chạy
     └── pubspec.yaml
 ```
@@ -378,19 +406,21 @@ keonhanh/
 
 ## 8. Thiết Kế Cơ Sở Dữ Liệu (Database Schema)
 
-Hệ thống bao gồm **9 bảng dữ liệu** quan hệ trong cơ sở dữ liệu `Keonhanh`:
+Hệ thống bao gồm **11 bảng dữ liệu** quan hệ trong cơ sở dữ liệu `Keonhanh`:
 
 | Bảng                | Chức năng                                                                 | Khóa chính | Khóa ngoại chính                                                                      |
 | :------------------ | :------------------------------------------------------------------------ | :--------- | :------------------------------------------------------------------------------------ |
-| **`Users`**         | Tài khoản đăng nhập, mật khẩu băm, vai trò (`player`, `captain`, `admin`) | `Id`       | Không có                                                                              |
+| **`Users`**         | Tài khoản đăng nhập, mật khẩu băm, vai trò, trạng thái trả phí (`IsPaid`, `PaidUntil`) | `Id`       | Không có                                                                              |
 | **`User_profiles`** | Hồ sơ cầu thủ, vị trí, khu vực, trạng thái tìm đội                        | `Id`       | `UserId` $\rightarrow$ `Users(Id)`                                                    |
 | **`Teams`**         | Thông tin đội bóng, logo, cấp độ, trạng thái tuyển quân                   | `Id`       | `CaptainId` $\rightarrow$ `Users(Id)`                                                 |
 | **`TeamPlayers`**   | Bảng liên kết nhiều-nhiều giữa Đội bóng và Cầu thủ                        | `Id`       | `TeamId` $\rightarrow$ `Teams(Id)`, `UserProfileId` $\rightarrow$ `User_profiles(Id)` |
-| **`Matches`**       | Thông tin kèo đấu, thời gian, tên sân, địa chỉ, tọa độ GPS, trạng thái    | `Id`       | `CreatorTeamId`, `MatchedWithTeamId` $\rightarrow$ `Teams(Id)`                        |
+| **`Matches`**       | Kèo đấu, thời gian, tên sân, địa chỉ, GPS, trạng thái, cờ ghim (`IsPinned`)| `Id`       | `CreatorTeamId`, `MatchedWithTeamId` $\rightarrow$ `Teams(Id)`                        |
 | **`JoinRequests`**  | Đơn xin gia nhập đội của cầu thủ tự do                                    | `Id`       | `RequesterId` $\rightarrow$ `User_profiles(Id)`, `TeamId` $\rightarrow$ `Teams(Id)`   |
 | **`Invitations`**   | Lời mời cầu thủ gia nhập đội từ đội trưởng                                | `Id`       | `TeamId` $\rightarrow$ `Teams(Id)`, `UserId` $\rightarrow$ `Users(Id)`                |
 | **`Messages`**      | Tin nhắn thảo luận nội bộ đội bóng                                        | `Id`       | `TeamId` $\rightarrow$ `Teams(Id)`, `SenderId` $\rightarrow$ `Users(Id)`              |
 | **`Notifications`** | Thông báo ghép kèo, lời mời, yêu cầu gia nhập, broadcast                  | `Id`       | `UserId` $\rightarrow$ `Users(Id)`                                                    |
+| **`Payments`**      | Lịch sử giao dịch VietQR PayOS (`OrderCode`, `Amount`, `Status`, `PaidAt`)| `Id`       | `UserId` $\rightarrow$ `Users(Id)`                                                    |
+| **`AiDailyUsage`**  | Đếm số câu hỏi Gemini AI theo ngày của người dùng (`UsageDate`, `QuestionCount`) | `Id` | `UserId` $\rightarrow$ `Users(Id)`                                                    |
 
 ---
 
@@ -463,7 +493,16 @@ Hệ thống bao gồm **9 bảng dữ liệu** quan hệ trong cơ sở dữ li
 
 ### 🤖 AI Assistant (`/api/ai`)
 
-- `POST /api/ai/chat` : Gửi câu hỏi tìm kiếm kèo đấu bằng ngôn ngữ tự nhiên. Trả về câu trả lời tư vấn kèm danh sách các đối tượng `MatchModel` phù hợp được trích xuất từ database SQL Server.
+- `POST /api/ai/chat` : Gửi câu hỏi tìm kiếm kèo đấu bằng ngôn ngữ tự nhiên. Trả về câu trả lời tư vấn kèm danh sách các đối tượng `MatchModel` phù hợp được trích xuất từ database SQL Server (Tài khoản miễn phí tối đa 5 câu/ngày; Thành viên trả phí không giới hạn).
+- `GET /api/ai/usage/:userId` : Lấy số lượng câu hỏi AI đã dùng trong ngày và hạn mức còn lại.
+
+### 💳 PayOS Payment & Subscriptions (`/api/payment`)
+
+- `POST /api/payment/create-payment-link` : Khởi tạo giao dịch thanh toán VietQR PayOS (29.000 VNĐ cho gói 30 ngày)
+- `POST /api/payment/payos-webhook` : Endpoint nhận Webhook tự động từ PayOS xác nhận chuyển khoản thành công và gia hạn tài khoản
+- `GET /api/payment/check-status/:orderCode` : Kiểm tra trạng thái thanh toán của mã đơn hàng (Smart Polling 3s)
+- `GET /api/payment/subscription/:userId` : Lấy thông tin trạng thái gói đặc quyền và số ngày sử dụng còn lại
+- `POST /api/payment/simulate-success/:orderCode` : Giả lập thanh toán thành công tức thì (Dành cho việc kiểm thử / chấm điểm đồ án)
 
 ---
 

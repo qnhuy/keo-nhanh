@@ -3,18 +3,40 @@ class UserModel {
   final String id;
   final String username;
   final String? role;
+  final bool isPaid;
+  final DateTime? paidUntil;
 
   UserModel({
     required this.id,
     required this.username,
     this.role,
+    this.isPaid = false,
+    this.paidUntil,
   });
 
+  bool get isPaidActive =>
+      isPaid && (paidUntil != null && paidUntil!.isAfter(DateTime.now()));
+
+  int get daysRemaining =>
+      paidUntil != null ? paidUntil!.difference(DateTime.now()).inDays : 0;
+
   factory UserModel.fromJson(Map<String, dynamic> json) {
+    DateTime? parsedUntil;
+    if (json['paidUntil'] != null) {
+      parsedUntil = DateTime.tryParse(json['paidUntil'].toString());
+    } else if (json['PaidUntil'] != null) {
+      parsedUntil = DateTime.tryParse(json['PaidUntil'].toString());
+    }
+
     return UserModel(
       id: (json['id'] ?? json['_id'] ?? json['Id'] ?? '').toString(),
       username: (json['username'] ?? json['Username'] ?? '').toString(),
       role: json['role']?.toString(),
+      isPaid: json['isPaid'] == true ||
+          json['isPaid'] == 1 ||
+          json['IsPaid'] == true ||
+          json['IsPaid'] == 1,
+      paidUntil: parsedUntil,
     );
   }
 
@@ -23,6 +45,8 @@ class UserModel {
       'id': id,
       'username': username,
       'role': role,
+      'isPaid': isPaid,
+      'paidUntil': paidUntil?.toIso8601String(),
     };
   }
 }

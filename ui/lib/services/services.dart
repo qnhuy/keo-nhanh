@@ -9,3 +9,4 @@ export 'notification_service.dart';
 export 'chat_service.dart';
 export 'admin_service.dart';
 export 'ai_service.dart';
+export 'payment_service.dart';

@@ -46,6 +46,7 @@ class MatchModel {
   final String? location;
   final double? latitude;
   final double? longitude;
+  final bool isPinned;
   final MatchTeamSummary creatorTeam;
   final MatchTeamSummary? matchedWithTeam;
 
@@ -58,6 +59,7 @@ class MatchModel {
     this.location,
     this.latitude,
     this.longitude,
+    this.isPinned = false,
     required this.creatorTeam,
     this.matchedWithTeam,
   });
@@ -86,6 +88,10 @@ class MatchModel {
       location: json['location']?.toString() ?? json['fieldAddress']?.toString() ?? json['Location']?.toString(),
       latitude: parseCoord(json['latitude'] ?? json['Latitude']),
       longitude: parseCoord(json['longitude'] ?? json['Longitude']),
+      isPinned: json['isPinned'] == true ||
+          json['isPinned'] == 1 ||
+          json['IsPinned'] == true ||
+          json['IsPinned'] == 1,
       creatorTeam: MatchTeamSummary.fromJson(json['creatorTeamId']),
       matchedWithTeam: json['matchedWithTeamId'] != null
           ? MatchTeamSummary.fromJson(json['matchedWithTeamId'])
@@ -103,6 +109,7 @@ class MatchModel {
       'location': location,
       'latitude': latitude,
       'longitude': longitude,
+      'isPinned': isPinned,
       'creatorTeamId': creatorTeam.toJson(),
       'matchedWithTeamId': matchedWithTeam?.toJson(),
     };

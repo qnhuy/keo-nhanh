@@ -1,4 +1,6 @@
 import 'dart:async';
+import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -194,26 +196,34 @@ class _PaymentQrScreenState extends State<PaymentQrScreen> {
     setState(() => _isSavingImage = true);
 
     try {
-      final res = await http.get(Uri.parse(_qrCodeUrl));
-      if (res.statusCode == 200) {
-        // Lưu ảnh bằng thư viện gal
-        await Gal.putImageBytes(res.bodyBytes, name: 'vietqr_keonhanh_$_orderCode.png');
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Row(
-              children: [
-                Icon(Icons.check_circle, color: Colors.white, size: 20),
-                SizedBox(width: 10),
-                Expanded(child: Text('Đã lưu ảnh mã QR vào thư viện ảnh của thiết bị!')),
-              ],
-            ),
-            backgroundColor: Color(0xFF16A34A),
-          ),
-        );
+      Uint8List bytes;
+      if (_qrCodeUrl.startsWith('data:image')) {
+        final base64String = _qrCodeUrl.split(',').last;
+        bytes = base64Decode(base64String);
       } else {
-        throw Exception('Mã phản hồi HTTP: ${res.statusCode}');
+        final res = await http.get(Uri.parse(_qrCodeUrl));
+        if (res.statusCode == 200) {
+          bytes = res.bodyBytes;
+        } else {
+          throw Exception('Mã phản hồi HTTP: ${res.statusCode}');
+        }
       }
+
+      // Lưu ảnh bằng thư viện gal
+      await Gal.putImageBytes(bytes, name: 'vietqr_keonhanh_$_orderCode.png');
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Row(
+            children: [
+              Icon(Icons.check_circle, color: Colors.white, size: 20),
+              SizedBox(width: 10),
+              Expanded(child: Text('Đã lưu ảnh mã QR vào thư viện ảnh của thiết bị!')),
+            ],
+          ),
+          backgroundColor: Color(0xFF16A34A),
+        ),
+      );
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -272,6 +282,72 @@ class _PaymentQrScreenState extends State<PaymentQrScreen> {
     final minutes = totalSeconds ~/ 60;
     final seconds = totalSeconds % 60;
     return '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
+  }
+
+  /// Hiển thị mã QR linh hoạt (Hỗ trợ cả Base64 Data URL và Network URL)
+  Widget _buildQrImageView() {
+    if (_qrCodeUrl.isEmpty) {
+      return const SizedBox(
+        height: 250,
+        width: 250,
+        child: Center(
+          child: CircularProgressIndicator(color: Color(0xFF16A34A)),
+        ),
+      );
+    }
+
+    // Trường hợp 1: Base64 Data URL (data:image/png;base64,...)
+    if (_qrCodeUrl.startsWith('data:image')) {
+      try {
+        final base64String = _qrCodeUrl.split(',').last;
+        final bytes = base64Decode(base64String);
+        return Image.memory(
+          bytes,
+          height: 250,
+          width: 250,
+          fit: BoxFit.contain,
+          errorBuilder: (ctx, err, stack) => _buildQrErrorPlaceholder(),
+        );
+      } catch (e) {
+        debugPrint('Lỗi giải mã Base64 QR: $e');
+        return _buildQrErrorPlaceholder();
+      }
+    }
+
+    // Trường hợp 2: Đường dẫn mạng chuẩn (HTTP/HTTPS)
+    return Image.network(
+      _qrCodeUrl,
+      height: 250,
+      width: 250,
+      fit: BoxFit.contain,
+      loadingBuilder: (ctx, child, progress) {
+        if (progress == null) return child;
+        return const SizedBox(
+          height: 250,
+          width: 250,
+          child: Center(
+            child: CircularProgressIndicator(color: Color(0xFF16A34A)),
+          ),
+        );
+      },
+      errorBuilder: (ctx, err, stack) => _buildQrErrorPlaceholder(),
+    );
+  }
+
+  Widget _buildQrErrorPlaceholder() {
+    return Container(
+      height: 250,
+      width: 250,
+      color: Colors.grey[100],
+      child: const Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.qr_code, size: 80, color: Colors.grey),
+          SizedBox(height: 8),
+          Text('Không thể tải ảnh QR', style: TextStyle(color: Colors.grey)),
+        ],
+      ),
+    );
   }
 
   @override
@@ -362,37 +438,7 @@ class _PaymentQrScreenState extends State<PaymentQrScreen> {
                   // Ảnh QR Code
                   ClipRRect(
                     borderRadius: BorderRadius.circular(12),
-                    child: _qrCodeUrl.isNotEmpty
-                        ? Image.network(
-                            _qrCodeUrl,
-                            height: 250,
-                            width: 250,
-                            fit: BoxFit.contain,
-                            loadingBuilder: (ctx, child, progress) {
-                              if (progress == null) return child;
-                              return const SizedBox(
-                                height: 250,
-                                width: 250,
-                                child: Center(
-                                  child: CircularProgressIndicator(color: Color(0xFF16A34A)),
-                                ),
-                              );
-                            },
-                            errorBuilder: (ctx, err, stack) => Container(
-                              height: 250,
-                              width: 250,
-                              color: Colors.grey[100],
-                              child: const Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(Icons.qr_code, size: 80, color: Colors.grey),
-                                  SizedBox(height: 8),
-                                  Text('Không thể tải ảnh QR', style: TextStyle(color: Colors.grey)),
-                                ],
-                              ),
-                            ),
-                          )
-                        : const SizedBox(height: 250, child: Center(child: Text('Đang tải mã QR...'))),
+                    child: _buildQrImageView(),
                   ),
 
                   const SizedBox(height: 16),

@@ -270,4 +270,37 @@ module.exports = function registerPaymentRoutes({ app, sql }) {
             res.status(500).json({ success: false, message: 'Lỗi server: ' + err.message });
         }
     });
+
+    // 6. GET /payment/qr-image/:orderCode - Trả về trực tiếp ảnh PNG của mã QR (Tránh lỗi 301/CORS)
+    app.get('/payment/qr-image/:orderCode', async (req, res) => {
+        try {
+            const { orderCode } = req.params;
+            const request = new sql.Request();
+            request.input('orderCode', sql.BigInt, orderCode);
+
+            const findRes = await request.query("SELECT QrCode FROM Payments WHERE OrderCode = @orderCode");
+            const payment = findRes.recordset[0];
+
+            if (!payment || !payment.QrCode) {
+                return res.status(404).send('Không tìm thấy ảnh QR.');
+            }
+
+            if (payment.QrCode.startsWith('data:image')) {
+                const base64Data = payment.QrCode.split(',')[1];
+                const imgBuffer = Buffer.from(base64Data, 'base64');
+                res.writeHead(200, {
+                    'Content-Type': 'image/png',
+                    'Content-Length': imgBuffer.length,
+                    'Cache-Control': 'public, max-age=86400',
+                    'Access-Control-Allow-Origin': '*'
+                });
+                return res.end(imgBuffer);
+            }
+
+            res.redirect(payment.QrCode);
+        } catch (err) {
+            console.error('[Payment] Lỗi khi lấy ảnh QR:', err);
+            res.status(500).send('Lỗi máy chủ khi lấy ảnh QR');
+        }
+    });
 };

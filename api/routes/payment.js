@@ -1,4 +1,5 @@
 const { createPaymentLink, verifyWebhookData, isConfigured } = require('../config/payos');
+const { ensureSchema } = require('../config/database');
 
 module.exports = function registerPaymentRoutes({ app, sql }) {
 
@@ -23,18 +24,32 @@ module.exports = function registerPaymentRoutes({ app, sql }) {
                 description
             });
 
-            // Lưu bản ghi vào bảng Payments với trạng thái PENDING
-            const request = new sql.Request();
-            request.input('userId', sql.UniqueIdentifier, userId);
-            request.input('orderCode', sql.BigInt, orderCode);
-            request.input('amount', sql.Int, amount);
-            request.input('paymentUrl', sql.NVarChar, paymentData.checkoutUrl);
-            request.input('qrCode', sql.NVarChar, paymentData.qrCode);
+            // Lưu bản ghi vào bảng Payments với trạng thái PENDING (tự động tạo bảng nếu chưa có)
+            const savePaymentRecord = async () => {
+                const request = new sql.Request();
+                request.input('userId', sql.UniqueIdentifier, userId);
+                request.input('orderCode', sql.BigInt, orderCode);
+                request.input('amount', sql.Int, amount);
+                request.input('paymentUrl', sql.NVarChar, paymentData.checkoutUrl);
+                request.input('qrCode', sql.NVarChar, paymentData.qrCode);
 
-            await request.query(`
-                INSERT INTO Payments (UserId, OrderCode, Amount, PackageName, Status, PaymentUrl, QrCode, CreatedAt)
-                VALUES (@userId, @orderCode, @amount, N'Gói Đặc Quyền 1 Tháng', 'PENDING', @paymentUrl, @qrCode, GETDATE())
-            `);
+                await request.query(`
+                    INSERT INTO Payments (UserId, OrderCode, Amount, PackageName, Status, PaymentUrl, QrCode, CreatedAt)
+                    VALUES (@userId, @orderCode, @amount, N'Gói Đặc Quyền 1 Tháng', 'PENDING', @paymentUrl, @qrCode, GETDATE())
+                `);
+            };
+
+            try {
+                await savePaymentRecord();
+            } catch (dbErr) {
+                if (dbErr.message && dbErr.message.includes('Payments')) {
+                    console.log('[Payment] Bảng Payments chưa tồn tại. Đang tự động khởi tạo bảng...');
+                    await ensureSchema();
+                    await savePaymentRecord();
+                } else {
+                    throw dbErr;
+                }
+            }
 
             res.json({
                 success: true,
@@ -120,12 +135,27 @@ module.exports = function registerPaymentRoutes({ app, sql }) {
             const request = new sql.Request();
             request.input('orderCode', sql.BigInt, orderCode);
 
-            const result = await request.query(`
-                SELECT p.*, u.IsPaid AS userIsPaid, u.PaidUntil AS userPaidUntil
-                FROM Payments p
-                JOIN Users u ON p.UserId = u.Id
-                WHERE p.OrderCode = @orderCode
-            `);
+            let result;
+            try {
+                result = await request.query(`
+                    SELECT p.*, u.IsPaid AS userIsPaid, u.PaidUntil AS userPaidUntil
+                    FROM Payments p
+                    JOIN Users u ON p.UserId = u.Id
+                    WHERE p.OrderCode = @orderCode
+                `);
+            } catch (dbErr) {
+                if (dbErr.message && dbErr.message.includes('Payments')) {
+                    await ensureSchema();
+                    result = await request.query(`
+                        SELECT p.*, u.IsPaid AS userIsPaid, u.PaidUntil AS userPaidUntil
+                        FROM Payments p
+                        JOIN Users u ON p.UserId = u.Id
+                        WHERE p.OrderCode = @orderCode
+                    `);
+                } else {
+                    throw dbErr;
+                }
+            }
 
             if (result.recordset.length === 0) {
                 return res.status(404).json({ success: false, message: 'Không tìm thấy mã đơn hàng.' });
@@ -194,7 +224,17 @@ module.exports = function registerPaymentRoutes({ app, sql }) {
             const request = new sql.Request();
             request.input('orderCode', sql.BigInt, orderCode);
 
-            const findRes = await request.query("SELECT * FROM Payments WHERE OrderCode = @orderCode");
+            let findRes;
+            try {
+                findRes = await request.query("SELECT * FROM Payments WHERE OrderCode = @orderCode");
+            } catch (dbErr) {
+                if (dbErr.message && dbErr.message.includes('Payments')) {
+                    await ensureSchema();
+                    findRes = await request.query("SELECT * FROM Payments WHERE OrderCode = @orderCode");
+                } else {
+                    throw dbErr;
+                }
+            }
             const payment = findRes.recordset[0];
 
             if (!payment) {
